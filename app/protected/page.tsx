@@ -1,11 +1,17 @@
 import { redirect } from "next/navigation";
 
+import { KanbanBoard } from "@/components/tasks/kanban-board";
+import type { Task } from "@/lib/tasks";
 import { createClient } from "@/lib/supabase/server";
-import { InfoIcon } from "lucide-react";
-import { FetchDataSteps } from "@/components/tutorial/fetch-data-steps";
-import { Suspense } from "react";
 
-async function UserDetails() {
+type DailyTaskRow = {
+  id: string;
+  task_id: string;
+  checked: boolean;
+  checked_date: string | null;
+};
+
+export default async function ProtectedPage() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getClaims();
 
@@ -13,31 +19,51 @@ async function UserDetails() {
     redirect("/auth/login");
   }
 
-  return JSON.stringify(data.claims, null, 2);
-}
+  const userId = (data.claims.sub ?? data.claims.user_id) as string | undefined;
+  if (!userId) {
+    redirect("/auth/login");
+  }
 
-export default function ProtectedPage() {
+  const { data: tasks, error: tasksError } = await supabase
+    .from("tasks")
+    .select(
+      "id,title,description,status,priority,tags,initial_comment,due_date,assigned_to,created_at",
+    )
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  const { data: dailyTasks, error: dailyTasksError } = await supabase
+    .from("daily_tasks")
+    .select("id,task_id,checked,checked_date")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true });
+
+  const dbError = tasksError ?? dailyTasksError;
+
   return (
-    <div className="flex-1 w-full flex flex-col gap-12">
-      <div className="w-full">
-        <div className="bg-accent text-sm p-3 px-5 rounded-md text-foreground flex gap-3 items-center">
-          <InfoIcon size="16" strokeWidth={2} />
-          This is a protected page that you can only see as an authenticated
-          user
+    <div className="w-full">
+      {dbError ? (
+        <div className="rounded-xl border bg-card p-6">
+          <div className="text-lg font-semibold">Database not ready</div>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Create the <code className="font-mono">tasks</code> and{" "}
+            <code className="font-mono">daily_tasks</code> tables in Supabase first.
+          </p>
+          <p className="mt-2 text-sm">
+            Run <code className="font-mono">supabase/tasks.sql</code> in the
+            Supabase SQL editor, then refresh this page.
+          </p>
+          <pre className="mt-4 overflow-auto rounded-md border bg-background p-3 text-xs text-muted-foreground">
+            {dbError.message}
+          </pre>
         </div>
-      </div>
-      <div className="flex flex-col gap-2 items-start">
-        <h2 className="font-bold text-2xl mb-4">Your user details</h2>
-        <pre className="text-xs font-mono p-3 rounded border max-h-32 overflow-auto">
-          <Suspense>
-            <UserDetails />
-          </Suspense>
-        </pre>
-      </div>
-      <div>
-        <h2 className="font-bold text-2xl mb-4">Next steps</h2>
-        <FetchDataSteps />
-      </div>
+      ) : (
+        <KanbanBoard
+          initialTasks={(tasks ?? []) as Task[]}
+          initialDailyTasks={(dailyTasks ?? []) as DailyTaskRow[]}
+          userId={userId}
+        />
+      )}
     </div>
   );
 }
