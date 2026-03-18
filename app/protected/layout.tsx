@@ -11,7 +11,40 @@ import { CoinsLeaderboardButton } from "@/components/tasks/streak-leaderboard-bu
 import { Button } from "@/components/ui/button";
 import { MobileHeaderMenu } from "@/components/tasks/mobile-header-menu";
 
-export default async function ProtectedLayout({
+export default function ProtectedLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-background">
+          <div className="border-b">
+            <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4">
+              <div className="flex items-center gap-3">
+                <Link href="/" className="font-semibold tracking-tight">
+                  NextPlay Tasks
+                </Link>
+                <Button asChild size="sm" variant="secondary">
+                  <Link href="/protected">Board</Link>
+                </Button>
+              </div>
+              <div className="flex items-center gap-3">
+                <ThemeSwitcher />
+              </div>
+            </div>
+          </div>
+          <div className="mx-auto w-full max-w-6xl px-4 py-8">{children}</div>
+        </main>
+      }
+    >
+      <ProtectedLayoutInner>{children}</ProtectedLayoutInner>
+    </Suspense>
+  );
+}
+
+async function ProtectedLayoutInner({
   children,
 }: {
   children: React.ReactNode;

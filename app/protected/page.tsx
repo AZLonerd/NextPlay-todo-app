@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 
 import { KanbanBoard } from "@/components/tasks/kanban-board";
 import type { Task } from "@/lib/tasks";
@@ -12,6 +13,14 @@ type DailyTaskRow = {
 };
 
 export default async function ProtectedPage() {
+  return (
+    <Suspense fallback={<div className="w-full text-sm text-muted-foreground">Loading…</div>}>
+      <ProtectedPageInner />
+    </Suspense>
+  );
+}
+
+async function ProtectedPageInner() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getClaims();
 

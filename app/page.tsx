@@ -6,16 +6,9 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { createClient } from "@/lib/supabase/server";
+import { HomeCreateAccountButton } from "@/components/home-create-account-button";
 
-export default async function Home() {
-  let isLoggedIn = false;
-  if (hasEnvVars) {
-    const supabase = await createClient();
-    const { data, error } = await supabase.auth.getClaims();
-    isLoggedIn = !error && Boolean(data?.claims?.sub);
-  }
-
+export default function Home() {
   return (
     <main className="min-h-screen bg-background">
       <div className="border-b">
@@ -58,13 +51,9 @@ export default async function Home() {
               <Button asChild>
                 <Link href="/protected">Open board</Link>
               </Button>
-              <Button
-                asChild
-                variant="outline"
-                className={isLoggedIn ? "invisible pointer-events-none" : undefined}
-              >
-                <Link href="/auth/sign-up">Create account</Link>
-              </Button>
+              <Suspense fallback={null}>
+                <HomeCreateAccountButton />
+              </Suspense>
             </div>
             <p className="text-sm text-muted-foreground">
               The board is protected. You’ll be prompted to sign in first.
