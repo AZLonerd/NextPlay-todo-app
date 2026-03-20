@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { timeAgo } from "@/lib/time";
+import { DailyXpIndicator } from "@/components/tasks/daily-xp-indicator";
+import { CoinsLeaderboardButton } from "@/components/tasks/streak-leaderboard-button";
 
 type ActivityRow = {
   id: string;
@@ -43,6 +45,7 @@ export function GlobalHistoryButton({ userId }: { userId: string }) {
     <>
       <Button
         variant="outline"
+        size="sm"
         onClick={async () => {
           setOpen(true);
           await load();
@@ -67,13 +70,8 @@ export function GlobalHistoryButton({ userId }: { userId: string }) {
                   <div className="font-semibold">History</div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={load}
-                    disabled={loading}
-                  >
-                    {loading ? "Loading..." : "Refresh"}
-                  </Button>
+                  <DailyXpIndicator userId={userId} variant="pill" className="flex" />
+                  <CoinsLeaderboardButton userId={userId} />
                   <Button variant="ghost" onClick={() => setOpen(false)}>
                     Close
                   </Button>

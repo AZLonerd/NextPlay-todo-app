@@ -5,11 +5,9 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { GlobalHistoryButton } from "@/components/tasks/global-history-button";
-import { DailyXpIndicator } from "@/components/tasks/daily-xp-indicator";
-import { CoinsLeaderboardButton } from "@/components/tasks/streak-leaderboard-button";
 import { Button } from "@/components/ui/button";
 import { MobileHeaderMenu } from "@/components/tasks/mobile-header-menu";
+import { GlobalHistoryButton } from "@/components/tasks/global-history-button";
 
 export default function ProtectedLayout({
   children,
@@ -19,14 +17,19 @@ export default function ProtectedLayout({
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen bg-background">
+        <main className="min-h-screen">
           <div className="border-b">
             <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4">
               <div className="flex items-center gap-3">
                 <Link href="/" className="font-semibold tracking-tight">
                   NextPlay Tasks
                 </Link>
-                <Button asChild size="sm" variant="secondary">
+                <Button
+                  asChild
+                  size="sm"
+                  variant="secondary"
+                  className="rounded-full border border-input shadow-sm"
+                >
                   <Link href="/protected">Board</Link>
                 </Button>
               </div>
@@ -55,7 +58,7 @@ async function ProtectedLayoutInner({
   if (!userId) redirect("/auth/login");
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen">
       <div className="border-b">
         <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4">
           <div className="flex items-center gap-6">
@@ -63,16 +66,19 @@ async function ProtectedLayoutInner({
               <Link href="/" className="font-semibold tracking-tight">
                 NextPlay Tasks
               </Link>
-              <Button asChild size="sm" variant="secondary">
+              <Button
+                asChild
+                size="sm"
+                variant="secondary"
+                className="rounded-full border border-input shadow-sm"
+              >
                 <Link href="/protected">Board</Link>
               </Button>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="hidden items-center gap-3 sm:flex">
+            <div className="hidden items-center gap-2 sm:flex">
               <ThemeSwitcher />
-              <DailyXpIndicator userId={userId} />
-              <CoinsLeaderboardButton userId={userId} />
               <GlobalHistoryButton userId={userId} />
             </div>
             {hasEnvVars ? (

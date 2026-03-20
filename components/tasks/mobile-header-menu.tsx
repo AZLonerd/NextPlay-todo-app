@@ -4,8 +4,6 @@ import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeSwitcher } from "@/components/theme-switcher";
-import { DailyXpIndicator } from "@/components/tasks/daily-xp-indicator";
-import { CoinsLeaderboardButton } from "@/components/tasks/streak-leaderboard-button";
 import { GlobalHistoryButton } from "@/components/tasks/global-history-button";
 
 export function MobileHeaderMenu({ userId }: { userId: string }) {
@@ -48,12 +46,7 @@ export function MobileHeaderMenu({ userId }: { userId: string }) {
                 <ThemeSwitcher />
               </div>
 
-              <DailyXpIndicator userId={userId} className="flex" />
-
               <div className="flex flex-col gap-2">
-                <div onClick={() => setOpen(false)}>
-                  <CoinsLeaderboardButton userId={userId} />
-                </div>
                 <div onClick={() => setOpen(false)}>
                   <GlobalHistoryButton userId={userId} />
                 </div>
@@ -65,4 +58,3 @@ export function MobileHeaderMenu({ userId }: { userId: string }) {
     </div>
   );
 }
-

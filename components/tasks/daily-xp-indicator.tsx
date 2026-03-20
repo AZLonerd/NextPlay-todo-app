@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { xpLevelInfo } from "@/lib/daily";
 import { cn } from "@/lib/utils";
+import { Coins, Flame } from "lucide-react";
 import {
   userStatsUpdatedEventName,
   type UserStatsRow,
@@ -12,9 +13,11 @@ import {
 export function DailyXpIndicator({
   userId,
   className,
+  variant = "card",
 }: {
   userId: string;
   className?: string;
+  variant?: "card" | "pill";
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [stats, setStats] = useState<UserStatsRow | null>(null);
@@ -74,6 +77,42 @@ export function DailyXpIndicator({
 
   const info = useMemo(() => xpLevelInfo(stats?.coins ?? 0), [stats?.coins]);
   const streak = stats?.streak ?? 0;
+
+  if (variant === "pill") {
+    return (
+      <div
+        className={cn(
+          "inline-flex items-center gap-3 rounded-full border bg-card px-3 py-1.5 text-sm",
+          className ?? "hidden sm:inline-flex",
+        )}
+        aria-label="Coins and streak"
+      >
+        <span className="inline-flex items-center gap-2" title="Coins">
+          <Coins className="h-4 w-4 text-muted-foreground" aria-hidden />
+          <span className="text-muted-foreground">Coins</span>
+          <span className="font-medium tabular-nums">{stats?.coins ?? 0}</span>
+          <span className="group relative inline-flex">
+            <button
+              type="button"
+              aria-label="How to get coins"
+              className="inline-flex h-5 w-5 items-center justify-center rounded-full border bg-background text-[10px] leading-none text-muted-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            >
+              <span aria-hidden>?</span>
+            </button>
+            <span className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 w-64 -translate-x-1/2 rounded-md border bg-background px-2 py-1 text-xs text-foreground shadow-sm opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
+              To get coins, complete all tasks in Daily Tasks before the timer is
+              up (check them all off). The more streak you have, the more coins you earn!
+            </span>
+          </span>
+        </span>
+        <span className="inline-flex items-center gap-2" title="Streak">
+          <Flame className="h-4 w-4 text-muted-foreground" aria-hidden />
+          <span className="text-muted-foreground">Streak</span>
+          <span className="font-medium tabular-nums">{streak}</span>
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div

@@ -22,7 +22,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Clock, MessageSquare, MoreHorizontal, Plus } from "lucide-react";
+import { Clock, MessageSquare, MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import {
   KANBAN_COLUMNS,
   type Task,
@@ -37,6 +37,8 @@ import {
 import { dispatchUserStatsUpdated, type UserStatsRow } from "@/lib/user-stats";
 import { cn } from "@/lib/utils";
 import { TaskEditor } from "@/components/tasks/task-editor";
+import { DailyXpIndicator } from "@/components/tasks/daily-xp-indicator";
+import { CoinsLeaderboardButton } from "@/components/tasks/streak-leaderboard-button";
 
 function formatDate(yyyyMmDd: string | null) {
   if (!yyyyMmDd) return null;
@@ -56,7 +58,7 @@ function parseTags(input: string): string[] {
   return Array.from(new Set(parts)).slice(0, 12);
 }
 
-const COINS_PER_DAILY_TASK = Math.floor(7 + Math.random() * 4);
+const COINS_PER_DAILY_TASK = 8;
 const STREAK_INCREMENT = 1;
 const COMMENT_BUTTON_STATUSES = new Set<TaskStatus>([
   "todo",
@@ -129,6 +131,7 @@ export function KanbanBoard({
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentsError, setCommentsError] = useState<string | null>(null);
   const [commentDraft, setCommentDraft] = useState("");
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
 
   const editingTask = useMemo(
     () => tasks.find((t) => t.id === editingId) ?? null,
@@ -233,6 +236,42 @@ export function KanbanBoard({
     setCommentRows((prev) => [...prev, data as TaskCommentRow]);
     setCommentDraft("");
   }, [commentDraft, commentViewTask, supabase, userId]);
+
+  const deleteComment = useCallback(
+    async (commentId: string) => {
+      if (deletingCommentId) return;
+      if (!window.confirm("Delete this comment?")) return;
+
+      setCommentsError(null);
+      setDeletingCommentId(commentId);
+      try {
+        const { error } = await supabase
+          .from("task_comments")
+          .delete()
+          .eq("id", commentId)
+          .eq("user_id", userId);
+
+        if (error) {
+          if (
+            error.message.includes("row-level security") &&
+            error.message.includes('"task_comments"')
+          ) {
+            setCommentsError(
+              "Couldn’t delete comment (blocked by database permissions). Re-run supabase/tasks.sql to apply the task_comments RLS policies.",
+            );
+          } else {
+            setCommentsError(error.message);
+          }
+          return;
+        }
+
+        setCommentRows((prev) => prev.filter((c) => c.id !== commentId));
+      } finally {
+        setDeletingCommentId(null);
+      }
+    },
+    [deletingCommentId, supabase, userId],
+  );
 
   const updateDailyMeta = useCallback(
     (updater: (m: DailyMeta) => DailyMeta) => {
@@ -480,14 +519,16 @@ export function KanbanBoard({
       }
 
       const row = current as UserStatsRow;
-      console.log(row)
       if (row.last_award_reminder_ms === reminderAtMs) {
         setCongratsText("Already counted for this reminder.");
         dispatchUserStatsUpdated(userId);
         return;
       }
 
-      const coinsGain = rows.length * COINS_PER_DAILY_TASK;
+      const baseCoinsGain = rows.length * COINS_PER_DAILY_TASK;
+      const currentStreak = row.streak ?? 0;
+      const streakMultiplier = 1 + currentStreak * 0.1;
+      const coinsGain = Math.max(1, Math.round(baseCoinsGain * streakMultiplier));
       const nextStreak = (row.streak ?? 0) + STREAK_INCREMENT;
       const nextCoins = (row.coins ?? 0) + coinsGain;
 
@@ -505,14 +546,6 @@ export function KanbanBoard({
         setCongratsText("Couldn’t update coins/streak. Please try again.");
         return;
       }
-
-      console.log({
-        rowCoins: row.coins,
-        rowStreak: row.streak,
-        coinsGain,
-        nextCoins,
-        nextStreak
-      });
 
       setCongratsText(`+${coinsGain} coins · Streak ${nextStreak}`);
       dispatchUserStatsUpdated(userId);
@@ -537,6 +570,60 @@ export function KanbanBoard({
     }
     await refreshDaily();
   }
+
+  const resetDailyChecks = useCallback(async () => {
+    setError(null);
+    const { error } = await supabase
+      .from("daily_tasks")
+      .update({ checked: false, checked_date: null })
+      .eq("user_id", userId);
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    await refreshDaily();
+  }, [refreshDaily, supabase, userId]);
+
+  const resetStreakIfMissed = useCallback(
+    async (reminderAtMs: number) => {
+      setError(null);
+
+      await supabase
+        .from("user_stats")
+        .upsert({ user_id: userId }, { onConflict: "user_id" });
+
+      const { data: current, error } = await supabase
+        .from("user_stats")
+        .select("user_id,coins,streak,last_award_reminder_ms,updated_at")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (error || !current) {
+        setError("Couldnâ€™t reset streak. Please try again.");
+        return;
+      }
+
+      const row = current as UserStatsRow;
+      if (row.last_award_reminder_ms === reminderAtMs) return;
+
+      const { error: updateError } = await supabase
+        .from("user_stats")
+        .update({
+          streak: 0,
+          last_award_reminder_ms: reminderAtMs,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", userId);
+
+      if (updateError) {
+        setError("Couldnâ€™t reset streak. Please try again.");
+        return;
+      }
+
+      dispatchUserStatsUpdated(userId);
+    },
+    [supabase, userId],
+  );
 
   function scheduleReminder() {
     setError(null);
@@ -608,11 +695,14 @@ export function KanbanBoard({
           setCongratsText(null);
           setCongratsOpen(true);
           await awardDailyCompletionIfEligible(reminderAtMs);
+          await resetDailyChecks();
           return;
         }
 
         setReminderMissingTitles(missing);
         setReminderOpen(true);
+        await resetStreakIfMissed(reminderAtMs);
+        await resetDailyChecks();
       })();
     }, ms);
 
@@ -621,6 +711,8 @@ export function KanbanBoard({
     awardDailyCompletionIfEligible,
     dailyMeta.reminderAt,
     dailyMeta.reminderForDate,
+    resetDailyChecks,
+    resetStreakIfMissed,
     todayKey,
     updateDailyMeta,
   ]);
@@ -644,9 +736,12 @@ export function KanbanBoard({
             Drag cards between columns to update status.
           </p>
         </div>
-        <Button variant="outline" onClick={refresh}>
-          Refresh
-        </Button>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center mr-[7%] top-[50%]">
+          <DailyXpIndicator userId={userId} variant="pill" className="flex" />
+          <div className="sm:shrink-0">
+            <CoinsLeaderboardButton userId={userId} />
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -910,7 +1005,7 @@ export function KanbanBoard({
                         !dailyTaskIds.has(task.id) ? (
                         <button
                           type="button"
-                          className="rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100 disabled:opacity-30"
+                          className="rounded-md p-1 text-muted-foreground opacity-70 transition-opacity hover:bg-accent hover:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-30"
                           aria-label="View comment"
                           draggable={false}
                           onPointerDown={(e) => {
@@ -1046,7 +1141,7 @@ export function KanbanBoard({
               </div>
 
               <div className="border-t p-4 text-xs text-muted-foreground">
-                Your coins/streak update in the top-right.
+                Your coins/streak update in Daily Tasks.
               </div>
             </div>
           </div>
@@ -1093,7 +1188,20 @@ export function KanbanBoard({
                     <div className="space-y-2">
                       {commentRows.map((c) => (
                         <div key={c.id} className="rounded-lg border bg-background p-3">
-                          <div className="whitespace-pre-wrap text-sm">{c.body}</div>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="whitespace-pre-wrap text-sm">{c.body}</div>
+                            {c.user_id === userId ? (
+                              <button
+                                type="button"
+                                className="rounded-md p-1 text-muted-foreground opacity-70 transition-opacity hover:bg-accent hover:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-30"
+                                aria-label="Delete comment"
+                                disabled={deletingCommentId === c.id}
+                                onClick={() => void deleteComment(c.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            ) : null}
+                          </div>
                           {c.created_at ? (
                             <div className="mt-1 text-xs text-muted-foreground">
                               {new Date(c.created_at).toLocaleString()}
