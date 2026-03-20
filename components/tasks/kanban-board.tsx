@@ -811,7 +811,7 @@ export function KanbanBoard({
                     <span aria-hidden>?</span>
                   </button>
                   <span className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 w-72 -translate-x-1/2 rounded-md border bg-background px-2 py-1 text-xs text-foreground shadow-sm opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
-                    Daily task is used tasks that you should complete daily. If
+                    Daily task is used for tasks that you should complete daily. If
                     you complete all daily tasks within the timer duration, you
                     will get coins as reward!
                   </span>
