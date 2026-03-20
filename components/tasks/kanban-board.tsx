@@ -801,7 +801,21 @@ export function KanbanBoard({
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-2 text-sm font-medium">
-                Daily Tasks
+                <span>Daily Tasks</span>
+                <span className="group relative inline-flex">
+                  <button
+                    type="button"
+                    aria-label="What are daily tasks?"
+                    className="inline-flex h-5 w-5 items-center justify-center rounded-full border bg-background text-[10px] leading-none text-muted-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  >
+                    <span aria-hidden>?</span>
+                  </button>
+                  <span className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 w-72 -translate-x-1/2 rounded-md border bg-background px-2 py-1 text-xs text-foreground shadow-sm opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
+                    Daily task is used tasks that you should complete daily. If
+                    you complete all daily tasks within the timer duration, you
+                    will get coins as reward!
+                  </span>
+                </span>
                 <Badge variant="secondary">
                   {checkedToday.size}/{dailyTasks.length}
                 </Badge>
