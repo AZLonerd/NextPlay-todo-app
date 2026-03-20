@@ -43,7 +43,7 @@ export default function Home() {
         <div className="grid items-center gap-10 lg:grid-cols-2">
           <div className="space-y-6">
             <div className="inline-flex items-center rounded-full border bg-gradient-to-r from-primary/10 via-card to-chart-2/10 px-3 py-1 text-xs text-muted-foreground shadow-sm">
-              Kanban • Drag & drop • Supabase Auth
+              Kanban • Drag & drop
             </div>
             <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
               A simple, modern{" "}
@@ -53,8 +53,8 @@ export default function Home() {
               todo app.
             </h1>
             <p className="text-base text-muted-foreground">
-              Log in, create tasks, and move them across a clean board. No
-              complexity—just CRUD.
+              Log in, create tasks, and move them across a clean board!
+              Gain motivation with game features!
             </p>
             <div className="flex flex-wrap gap-3">
               <Button asChild>
